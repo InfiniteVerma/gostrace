@@ -58,7 +58,5 @@ func main() {
     }
 
     ret := C.hello(C.int(i));
-
-    fmt.Print("C.hello ret: ", ret)
     //res := int(C.ptrace());
 }
