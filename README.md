@@ -14,3 +14,6 @@ V1
 V2
  - [x] Print 1 syscall per line like strace
  - [ ] Print write sys call properly
+
+V3
+ - [ ] Write more syscalls with proper args and ret val
