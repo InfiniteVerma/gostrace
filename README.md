@@ -10,3 +10,7 @@ V1
  - [x] Interact with ptrace.h header file 
  - [x] Add a wrapper.h/.c and use it in go using cgo
  - [x] Basic attach to pid and just print sys call name
+
+V2
+ - [x] Print 1 syscall per line like strace
+ - [ ] Print write sys call properly
