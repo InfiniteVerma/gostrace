@@ -33,7 +33,7 @@ void print_string(pid_t target_pid, long addr, size_t size) {
 }
 
 int main() {
-    pid_t target_pid = 117181; // Replace with your target process PID
+    pid_t target_pid = 245312; // Replace with your target process PID
 
     // Attach to the process
     if (ptrace(PTRACE_ATTACH, target_pid, NULL, NULL) == -1) {

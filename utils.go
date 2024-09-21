@@ -391,3 +391,13 @@ func get_sys_call(sys_int int) string {
 	}
 	return i
 }
+
+func searchStr(slice []string, str string) (bool, int) {
+	for i, v := range slice {
+		if v == str {
+			return true, i
+		}
+	}
+	return false, -1
+}
+

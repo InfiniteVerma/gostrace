@@ -12,16 +12,11 @@ import (
 	"strconv"
 )
 
-type StraceParams struct {
-}
-
-func searchStr(slice []string, str string) (bool, int) {
-	for i, v := range slice {
-		if v == str {
-			return true, i
-		}
-	}
-	return false, -1
+type GoStraceParams struct {
+    helpSet bool
+    pidSet bool
+    pid int
+    err bool
 }
 
 const HELP = "gostrace: must have PROG [ARGS] or -p PID. Try 'gostrace -h' for more information."
@@ -40,32 +35,56 @@ func parseArgs() int {
 
 	slice := os.Args[1:]
 
-	if found, _ := searchStr(slice, "-h"); found {
+    param := GoStraceParams{}
+    //for i, v := range slice {
+    for i:=0; i < len(slice); i++ {
+        v := slice[i]
+        fmt.Println("i: ", i, "v: ", v)
+
+        if v == "-h" {
+            param.helpSet = true
+        } else if v == "-p" {
+            param.pidSet = true
+
+            if i + 1 >= args_length-1 {
+                fmt.Println("ERROR couldn't find pid.")
+                os.Exit(1)
+            }
+
+            pid_str := slice[i + 1]
+	        pid_int, err := strconv.Atoi(pid_str)
+
+            if err != nil {
+                fmt.Println("ERROR could not parse pid to int ", err)
+                os.Exit(1)
+            }
+
+            param.pid = pid_int
+            i++
+        } else {
+            param.err = true
+        }
+    }
+
+    fmt.Println(param)
+
+    if param.err {
+        fmt.Println("ERROR args parsing failed.")
+        os.Exit(1)
+    }
+
+    if param.helpSet {
 		fmt.Println(USAGE)
 		os.Exit(1)
-	}
+    }
 
-	if found, index := searchStr(slice, "-p"); found {
-		if index+2 >= len(os.Args) {
-			fmt.Println("ERROR couldn't find pid.")
-			os.Exit(1)
-		}
+    if param.pidSet != true {
+        fmt.Println("ERROR pid was not passed. Use -h to get usage")
+        os.Exit(1)
+    }
 
-		pid_str := os.Args[index+2]
-		fmt.Println("Starting gostrace with pid: ", pid_str)
-		i, err := strconv.Atoi(pid_str)
-
-		if err != nil {
-			fmt.Println("ERROR couldn't cast string pid to int")
-			os.Exit(1)
-		}
-
-		return i
-	}
-
-	fmt.Println(HELP)
-	os.Exit(1)
-	return 1
+	fmt.Println("Starting gostrace with pid: ", param.pid)
+	return param.pid
 }
 
 func main() {
@@ -98,6 +117,4 @@ func main() {
 		fmt.Println("ERROR could not connect to pid: ", pid)
 		os.Exit(1)
 	}
-
-	C.wrapper_hello()
 }

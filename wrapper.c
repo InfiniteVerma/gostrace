@@ -3,12 +3,6 @@
 #include <sys/ptrace.h>
 #include <sys/reg.h>
 
-int wrapper_hello() {
-    printf("Hello from wrapper!\n");
-    fflush(stdout);
-    return 0;
-}
-
 int ptrace_connect(int pid) {
     printf("hello world, connecting to pid: %d\n", pid);
     int ret = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
