@@ -1,2 +1,5 @@
 goptrace
 a.out
+tracer
+tracee
+gostrace

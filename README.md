@@ -1,4 +1,4 @@
-# goptrace
+# gostrace
 
 A process tracer CLI written in golang
 
