@@ -8,31 +8,37 @@ import (
 
 /*
 #include <sys/ptrace.h>
+#include <sys/reg.h>
 #include <sys/wait.h>
 #include <stdio.h>
-int hello(int pid) {
-    printf("Hello from C\n");
-    fflush(stdout);
+
+int ptrace_connect(int pid) {
+    printf("hello world, connecting to pid: %d\n", pid);
     int ret = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
-    printf("%d\n", ret);
+    printf("ptrace returned: %d\n", ret);
     fflush(stdout);
 
-    waitpid(pid, NULL, 0); // wait for process to stop
+    return ret;
+}
 
-    while (1) {
-        if (ptrace(PTRACE_SYSCALL, pid, NULL, NULL) == -1) {
-            perror("ptrace(PTRACE_SYSCALL)");
-            return 1;
-        }
-        waitpid(pid, NULL, 0); // Wait for syscall entry
-        // Read system call number and arguments here
-        if (ptrace(PTRACE_SYSCALL, pid, NULL, NULL) == -1) {
-            perror("ptrace(PTRACE_SYSCALL)");
-            return 1;
-        }
-        waitpid(pid, NULL, 0); // Wait for syscall exit
-        // Read syscall return value here
-    }
+int c_waitpid(pid_t pid) {
+    waitpid(pid, NULL, 0); // wait for process to stop
+}
+
+int ptrace_detach(int pid) {
+    printf("detaching from pid: %d\n", pid);
+    int ret = ptrace(PTRACE_DETACH, pid, NULL, NULL);
+    printf("ptrace returned: %d\n", ret);
+    fflush(stdout);
+
+    return ret;
+}
+
+void peek(int pid) {
+    printf("peeking to attached pid: %d\n", pid);
+    int orig_eax = ptrace(PTRACE_PEEKUSER, pid, sizeof(long) * ORIG_RAX, NULL);
+    printf("orig_eax val: %d\n", orig_eax);
+    fflush(stdout);
 }
 */
 import "C"
@@ -57,6 +63,25 @@ func main() {
         os.Exit(1)
     }
 
-    ret := C.hello(C.int(i));
-    //res := int(C.ptrace());
+    ret := C.ptrace_connect(C.int(i))
+
+    if ret < 0 {
+        fmt.Println("ERROR could not connect to pid: ", pid)
+        os.Exit(1)
+    }
+
+    fmt.Println("ptrace_connect returned ret: ", ret)
+    fmt.Println("now waiting")
+
+    C.c_waitpid(C.int(i))
+
+    fmt.Println("\n\nLooking at orig_eax: ")
+    C.peek(C.int(i));
+
+    ret = C.ptrace_detach(C.int(i));
+
+    if ret < 0 {
+        fmt.Println("ERROR could not connect to pid: ", pid)
+        os.Exit(1)
+    }
 }
