@@ -34,11 +34,9 @@ int ptrace_detach(int pid) {
     return ret;
 }
 
-void peek(int pid) {
+int ptrace_get_sys_call(int pid) {
     printf("peeking to attached pid: %d\n", pid);
-    int orig_eax = ptrace(PTRACE_PEEKUSER, pid, sizeof(long) * ORIG_RAX, NULL);
-    printf("orig_eax val: %d\n", orig_eax);
-    fflush(stdout);
+    ptrace(PTRACE_PEEKUSER, pid, sizeof(long) * ORIG_RAX, NULL);
 }
 */
 import "C"
@@ -76,7 +74,10 @@ func main() {
     C.c_waitpid(C.int(i))
 
     fmt.Println("\n\nLooking at orig_eax: ")
-    C.peek(C.int(i));
+
+    sys_int := int(C.ptrace_get_sys_call(C.int(i)))
+
+    fmt.Println("sys call called: ", get_sys_call(sys_int))
 
     ret = C.ptrace_detach(C.int(i));
 
