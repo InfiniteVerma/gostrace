@@ -7,37 +7,8 @@ import (
 )
 
 /*
-#include <sys/ptrace.h>
-#include <sys/reg.h>
-#include <sys/wait.h>
-#include <stdio.h>
-
-int ptrace_connect(int pid) {
-    printf("hello world, connecting to pid: %d\n", pid);
-    int ret = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
-    printf("ptrace returned: %d\n", ret);
-    fflush(stdout);
-
-    return ret;
-}
-
-int c_waitpid(pid_t pid) {
-    waitpid(pid, NULL, 0); // wait for process to stop
-}
-
-int ptrace_detach(int pid) {
-    printf("detaching from pid: %d\n", pid);
-    int ret = ptrace(PTRACE_DETACH, pid, NULL, NULL);
-    printf("ptrace returned: %d\n", ret);
-    fflush(stdout);
-
-    return ret;
-}
-
-int ptrace_get_sys_call(int pid) {
-    printf("peeking to attached pid: %d\n", pid);
-    ptrace(PTRACE_PEEKUSER, pid, sizeof(long) * ORIG_RAX, NULL);
-}
+#cgo CFLAGS: -I.
+#include "wrapper.h"
 */
 import "C"
 
@@ -85,4 +56,6 @@ func main() {
         fmt.Println("ERROR could not connect to pid: ", pid)
         os.Exit(1)
     }
+
+    C.wrapper_hello()
 }
