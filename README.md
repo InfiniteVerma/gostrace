@@ -2,6 +2,12 @@
 
 A process tracer CLI written in golang
 
+# Setup
+
+```
+echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
+```
+
 # Plan
  
 V1
@@ -13,7 +19,7 @@ V1
 
 V2
  - [x] Print 1 syscall per line like strace
- - [ ] Print write sys call properly
+ - [x] Print write sys call properly
 
 V3
  - [ ] Write more syscalls with proper args and ret val

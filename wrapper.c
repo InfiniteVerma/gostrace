@@ -7,8 +7,6 @@
 #include <sys/reg.h>
 #include <sys/user.h>
 
-char* getString(pid_t pid, long addr, size_t size);
-
 int wrapper_connect(pid_t pid) {
     return ptrace(PTRACE_ATTACH, pid, NULL, NULL);
 }
@@ -44,10 +42,10 @@ char* wrapper_peek_regs(pid_t pid) {
     struct user_regs_struct regs;
     ptrace(PTRACE_GETREGS, pid, NULL, &regs);
     //printf("Write called with ""%llu, %llu, %llu\n", regs.rdi, regs.rsi, regs.rdx);
-    return getString(pid, regs.rsi, regs.rdx);
+    return wrapper_get_data(pid, regs.rsi, regs.rdx);
 }
 
-char* getString(pid_t pid, long addr, size_t size) {
+char* wrapper_get_data(pid_t pid, long addr, size_t size) {
     char *buffer = (char*)malloc(size + 1);
     if (!buffer) {
         perror("malloc failed");
@@ -67,4 +65,18 @@ char* getString(pid_t pid, long addr, size_t size) {
 
     buffer[size] = '\0'; // Null-terminate the string
     return buffer;
+}
+
+long wrapper_peek_data(pid_t pid, long addr) {
+    long data = ptrace(PTRACE_PEEKDATA, pid, addr, NULL);
+    return data;
+}
+
+struct user_regs_struct* wrapper_get_regs(pid_t pid) {
+    struct user_regs_struct* regs = (struct user_regs_struct*) malloc(sizeof(struct user_regs_struct));
+    if (ptrace(PTRACE_GETREGS, pid, NULL, regs) == -1) {
+        free(regs); // Free memory if ptrace fails
+        return NULL; // Handle error
+    }
+    return regs;
 }
