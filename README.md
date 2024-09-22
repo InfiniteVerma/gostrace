@@ -21,6 +21,8 @@ echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
 ## Sys calls implemented:
  - write
  - clock_nanosleep
+ - close
+ - lseek
 
 ## Plan
  

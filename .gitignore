@@ -3,3 +3,4 @@ a.out
 tracer
 tracee1
 gostrace
+example/*.txt

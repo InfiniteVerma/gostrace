@@ -2,6 +2,19 @@ package main
 
 type SysCallType int
 type ClockID int
+type LSeekWhence int
+
+const (
+	SEEK_SET LSeekWhence = iota
+	SEEK_CUR
+	SEEK_END
+)
+
+var lseekIDNames = map[LSeekWhence]string{
+	SEEK_SET: "SEEK_SET",
+	SEEK_CUR: "SEEK_CUR",
+	SEEK_END: "SEEK_END",
+}
 
 const (
 	CLOCK_REALTIME ClockID = iota

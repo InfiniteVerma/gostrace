@@ -99,13 +99,27 @@ type SysCallInfo struct {
 	ret    string
 }
 
-func getSysCallInfoStr(info SysCallInfo) string {
+func getSysCallInfoStr(info SysCallInfo, paramCount int) string {
 
-	if info.param4 != "" {
-		return info.name + "(" + info.param1 + ", " + info.param2 + ", " + info.param3 + ", " + info.param4 + ") = " + info.ret
-	} else {
-		return info.name + "(" + info.param1 + ", " + info.param2 + ", " + info.param3 + ") = " + info.ret
+	var sb strings.Builder
+
+	sb.WriteString(info.name + "(")
+
+	if paramCount >= 1 {
+		sb.WriteString(info.param1)
 	}
+	if paramCount >= 2 {
+		sb.WriteString(", " + info.param2)
+	}
+	if paramCount >= 3 {
+		sb.WriteString(", " + info.param3)
+	}
+	if paramCount >= 4 {
+		sb.WriteString(", " + info.param4)
+	}
+	sb.WriteString(") = " + info.ret)
+
+	return sb.String()
 }
 
 const HELP = "gostrace: must have PROG [ARGS] or -p PID. Try 'gostrace -h' for more information."
@@ -246,7 +260,7 @@ func printSysCall(c_pid C.int, sysCallPair [2]UserRegsStruct) {
 	sysCallInfo := SysCallInfo{
 		name:   get_sys_call(SysCallType(sysCallPair[1].orig_rax)),
 		param1: fmt.Sprint(sysCallPair[1].rdi),
-		param2: "",
+		param2: fmt.Sprint(sysCallPair[1].rsi),
 		param3: fmt.Sprint(sysCallPair[1].rdx),
 		ret:    fmt.Sprint(sysCallPair[1].rax),
 	}
@@ -262,7 +276,7 @@ func printSysCall(c_pid C.int, sysCallPair [2]UserRegsStruct) {
 		defer C.free(unsafe.Pointer(c_buffer_ptr))
 		buffer := strings.ReplaceAll(C.GoString(c_buffer_ptr), "\n", "\\n")
 		sysCallInfo.param2 = buffer
-		fmt.Println(getSysCallInfoStr(sysCallInfo))
+		fmt.Println(getSysCallInfoStr(sysCallInfo, 3))
 		processed = true
 	case clock_nanosleep:
 		sysCallInfo.param1 = clockIDNames[ClockID(sysCallPair[1].rdi)]
@@ -278,12 +292,19 @@ func printSysCall(c_pid C.int, sysCallPair [2]UserRegsStruct) {
 
 		sysCallInfo.param3 = toString(*timeSpec)
 		sysCallInfo.param4 = fmt.Sprint(sysCallPair[1].r10)
-		fmt.Println(getSysCallInfoStr(sysCallInfo))
+		fmt.Println(getSysCallInfoStr(sysCallInfo, 4))
+		processed = true
+	case sys_close:
+		fmt.Println(getSysCallInfoStr(sysCallInfo, 1))
+		processed = true
+	case lseek:
+		sysCallInfo.param3 = lseekIDNames[LSeekWhence(sysCallPair[1].rdx)]
+		fmt.Println(getSysCallInfoStr(sysCallInfo, 3))
 		processed = true
 	}
 
 	if processed == false {
-		fmt.Println(sysCallInfo.name)
+		fmt.Println(sysCallInfo.name + " - TODO")
 	}
 }
 
