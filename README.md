@@ -1,6 +1,8 @@
 # gostrace
 
-A process tracer CLI written in golang. The design is rather straightforward. We get sys calls via ptrace functions using C wrappers and on each sys call type found, get it's arguments from memory and print it in human readable format.
+A process tracer CLI written in golang. 
+
+The design is rather straightforward. We get sys calls via ptrace functions using C wrappers and on each sys call type found, get it's arguments from memory and print it in human readable format.
 
 ## Setup
 
