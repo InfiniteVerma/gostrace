@@ -98,6 +98,10 @@ type SysCallInfo struct {
 	ret    string
 }
 
+func getSysCallInfoStr(info SysCallInfo) string {
+	return info.name + "(" + info.param1 + ", " + info.param2 + ", " + info.param3 + ") = " + info.ret
+}
+
 const HELP = "gostrace: must have PROG [ARGS] or -p PID. Try 'gostrace -h' for more information."
 const USAGE = "Usage: gostrace [-p PID]"
 
@@ -179,8 +183,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	isWriteFound := false
-	firstSysInfo := SysCallInfo{}
+	var sysCallPair [2]UserRegsStruct
 	for {
 		c_status := C.int(0)
 		C.wrapper_waitpid(c_pid, &c_status)
@@ -190,22 +193,32 @@ func main() {
 			break
 		}
 
-		sys_int := SysCallType((C.wrapper_get_sys_call(c_pid)))
+		sysInt := SysCallType((C.wrapper_get_sys_call(c_pid)))
 
-		if sys_int == write {
-			if isWriteFound == false {
-				firstSysInfo = parseWrite(c_pid, sys_int)
-				//fmt.Println("see: ", firstSysInfo)
-				isWriteFound = true
-			} else {
-				secondSysInfo := parseWrite(c_pid, sys_int)
-				firstSysInfo.ret = secondSysInfo.ret
-				fmt.Println(get_sys_str(secondSysInfo))
-				firstSysInfo = SysCallInfo{}
-				isWriteFound = false
-			}
+		if sysCallPair[0].orig_rax == 0 {
+			//fmt.Println("First sys call")
+
+			sysCallPair[0] = getRegisters(c_pid)
 		} else {
-			fmt.Println(get_sys_call(sys_int))
+			if sysCallPair[0].orig_rax != uint64(sysInt) {
+				//fmt.Println("Second sys call doesn't match first. resetting")
+				sysCallPair[0] = UserRegsStruct{}
+				sysCallPair[1] = UserRegsStruct{}
+
+				sysCallPair[0] = getRegisters(c_pid)
+			} else {
+				sysCallPair[1] = getRegisters(c_pid)
+			}
+		}
+
+		//fmt.Println(sysCallPair)
+
+		if sysCallPair[1].orig_rax != 0 {
+
+			printSysCall(c_pid, sysCallPair)
+			//fmt.Println("Processed a sys call pair, resetting")
+			sysCallPair[0] = UserRegsStruct{}
+			sysCallPair[1] = UserRegsStruct{}
 		}
 
 		C.wrapper_continue(c_pid)
@@ -219,7 +232,41 @@ func main() {
 	//}
 }
 
-func getSysCallData(c_pid C.int) (UserRegsStruct, string) {
+func printSysCall(c_pid C.int, sysCallPair [2]UserRegsStruct) {
+
+	sysCall := SysCallType(sysCallPair[1].orig_rax)
+	rsi := C.long(sysCallPair[1].rsi)
+	rdx := C.ulong(sysCallPair[1].rdx)
+
+	sysCallInfo := SysCallInfo{
+		name:   get_sys_call(SysCallType(sysCallPair[1].orig_rax)),
+		param1: fmt.Sprint(sysCallPair[1].rdi),
+		param2: "",
+		param3: fmt.Sprint(sysCallPair[1].rdx),
+		ret:    fmt.Sprint(sysCallPair[1].rax),
+	}
+
+	processed := false
+	switch sysCall {
+	case write:
+		c_buffer_ptr := C.wrapper_get_data(c_pid, rsi, rdx)
+		if c_buffer_ptr == nil {
+			fmt.Println("ERROR c_buffer_ptr is NULL!")
+			os.Exit(1)
+		}
+		defer C.free(unsafe.Pointer(c_buffer_ptr))
+		buffer := strings.ReplaceAll(C.GoString(c_buffer_ptr), "\n", "\\n")
+		sysCallInfo.param2 = buffer
+		fmt.Println(getSysCallInfoStr(sysCallInfo))
+		processed = true
+	}
+
+	if processed == false {
+		fmt.Println(sysCallInfo.name)
+	}
+}
+
+func getRegisters(c_pid C.int) UserRegsStruct {
 	c_struct_ptr := C.wrapper_get_regs(c_pid)
 
 	if c_struct_ptr == nil {
@@ -231,58 +278,5 @@ func getSysCallData(c_pid C.int) (UserRegsStruct, string) {
 
 	regs := (*UserRegsStruct)(unsafe.Pointer(c_struct_ptr))
 
-	c_buffer_data := C.wrapper_get_data(c_pid, C.long(regs.rsi), C.ulong(regs.rdx))
-
-	if c_buffer_data == nil {
-		fmt.Println("ERROR c_buffer_data is NULL!")
-		os.Exit(1)
-	}
-
-	defer C.free(unsafe.Pointer(c_buffer_data))
-
-	second_param := C.GoString(c_buffer_data)
-
-	second_param = strings.ReplaceAll(second_param, "\n", "\\n")
-
-	return *regs, second_param
-}
-
-func get_sys_str(info SysCallInfo) string {
-	return info.name + "(" + info.param1 + ", " + info.param2 + ", " + info.param3 + ") = " + info.ret
-}
-
-func parseWrite(c_pid C.int, sys_call_type SysCallType) SysCallInfo {
-	c_struct_ptr := C.wrapper_get_regs(c_pid)
-
-	if c_struct_ptr == nil {
-		fmt.Println("ERROR c_struct_ptr is NULL!")
-		os.Exit(1)
-	}
-
-	defer C.free(unsafe.Pointer(c_struct_ptr))
-
-	regs := (*UserRegsStruct)(unsafe.Pointer(c_struct_ptr))
-
-	//debugUserRegsStruct(*regs)
-
-	c_buffer_data := C.wrapper_get_data(c_pid, C.long(regs.rsi), C.ulong(regs.rdx))
-
-	if c_buffer_data == nil {
-		fmt.Println("ERROR c_buffer_data is NULL!")
-		os.Exit(1)
-	}
-
-	defer C.free(unsafe.Pointer(c_buffer_data))
-
-	second_param := C.GoString(c_buffer_data)
-
-	second_param = strings.ReplaceAll(second_param, "\n", "\\n")
-
-	return SysCallInfo{
-		name:   get_sys_call(sys_call_type),
-		param1: fmt.Sprint(regs.rdi),
-		param2: second_param,
-		param3: fmt.Sprint(regs.rdx),
-		ret:    fmt.Sprint(regs.rax),
-	}
+	return *regs
 }
