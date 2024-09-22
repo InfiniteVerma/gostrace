@@ -8,18 +8,24 @@ package main
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"unsafe"
 )
 
 type GoStraceParams struct {
-	helpSet bool
-	pidSet  bool
-	pid     int
-	err     bool
+	helpSet         bool
+	pidSet          bool
+	pid             int
+	pathToBinarySet bool
+	pathToBinary    string
+	err             bool
 }
 
 // RDI: First parameter
@@ -143,28 +149,35 @@ func parseArgs() int {
 		v := slice[i]
 		fmt.Println("i: ", i, "v: ", v)
 
-		if v == "-h" {
-			param.helpSet = true
-		} else if v == "-p" {
-			param.pidSet = true
+		if _, err := os.Stat(v); errors.Is(err, os.ErrNotExist) {
+			// path/to/whatever does not exist
 
-			if i+1 >= args_length-1 {
-				fmt.Println("ERROR couldn't find pid.")
-				os.Exit(1)
+			if v == "-h" {
+				param.helpSet = true
+			} else if v == "-p" {
+				param.pidSet = true
+
+				if i+1 >= args_length-1 {
+					fmt.Println("ERROR couldn't find pid.")
+					os.Exit(1)
+				}
+
+				pid_str := slice[i+1]
+				pid_int, err := strconv.Atoi(pid_str)
+
+				if err != nil {
+					fmt.Println("ERROR could not parse pid to int ", err)
+					os.Exit(1)
+				}
+
+				param.pid = pid_int
+				i++
+			} else {
+				param.err = true
 			}
-
-			pid_str := slice[i+1]
-			pid_int, err := strconv.Atoi(pid_str)
-
-			if err != nil {
-				fmt.Println("ERROR could not parse pid to int ", err)
-				os.Exit(1)
-			}
-
-			param.pid = pid_int
-			i++
 		} else {
-			param.err = true
+			param.pathToBinarySet = true
+			param.pathToBinary = v
 		}
 	}
 
@@ -180,13 +193,45 @@ func parseArgs() int {
 		os.Exit(1)
 	}
 
-	if param.pidSet != true {
-		fmt.Println("ERROR pid was not passed. Use -h to get usage")
+	if param.pidSet != true && param.pathToBinarySet != true {
+		fmt.Println("ERROR pid was not passed neither path to binary. Use -h to get usage")
 		os.Exit(1)
 	}
 
-	fmt.Println("Starting gostrace with pid: ", param.pid)
-	return param.pid
+	if param.pathToBinarySet {
+		cmd := exec.Command(param.pathToBinary)
+
+		err := cmd.Start()
+
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
+
+		if err != nil {
+			fmt.Println("ERROR could not start binary at path: ", param.pathToBinary)
+			os.Exit(1)
+		}
+
+		pid := cmd.Process.Pid
+
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+		go func() {
+			<-sigs
+
+			pgid, err := syscall.Getpgid(cmd.Process.Pid)
+			if err == nil {
+				syscall.Kill(-pgid, syscall.SIGKILL)
+				fmt.Println("Killed child process and group")
+			}
+		}()
+
+		return pid
+	} else {
+		fmt.Println("Starting gostrace with pid: ", param.pid)
+		return param.pid
+	}
 }
 
 func main() {
@@ -300,6 +345,9 @@ func printSysCall(c_pid C.int, sysCallPair [2]UserRegsStruct) {
 	case lseek:
 		sysCallInfo.param3 = lseekIDNames[LSeekWhence(sysCallPair[1].rdx)]
 		fmt.Println(getSysCallInfoStr(sysCallInfo, 3))
+		processed = true
+	case openat:
+		fmt.Println(getSysCallInfoStr(sysCallInfo, 1))
 		processed = true
 	}
 
