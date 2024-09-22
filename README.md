@@ -1,12 +1,16 @@
 # gostrace
 
-A process tracer CLI written in golang
+A process tracer CLI written in golang. The design is rather straightforward, we iteract with ptrace functions using C wrappers and on each sys call type, get read it's argument and convert it into human readable string.
 
 # Setup
 
 ```
 echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
 ```
+
+# Sys calls implemented:
+ - write
+ - clock_nanosleep
 
 # Plan
  
