@@ -349,6 +349,10 @@ func printSysCall(c_pid C.int, sysCallPair [2]UserRegsStruct) {
 	case openat:
 		fmt.Println(getSysCallInfoStr(sysCallInfo, 1))
 		processed = true
+    case brk:
+        sysCallInfo.param1 = "NULL"
+		fmt.Println(getSysCallInfoStr(sysCallInfo, 1))
+		processed = true
 	}
 
 	if processed == false {
