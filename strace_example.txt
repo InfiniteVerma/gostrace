@@ -1,9 +1,0 @@
-strace: Process 110541 attached
-restart_syscall(<... resuming interrupted read ...>) = 0
-write(1, "Hello\n", 6)                  = 6
-clock_nanosleep(CLOCK_REALTIME, 0, {tv_sec=0, tv_nsec=500000000}, 0x7fffc57dfb70) = 0
-write(1, "World from tracee\n", 18)     = 18
-clock_nanosleep(CLOCK_REALTIME, 0, {tv_sec=0, tv_nsec=500000000}, 0x7fffc57dfb70) = 0
-write(1, "Hello\n", 6)                  = 6
-clock_nanosleep(CLOCK_REALTIME, 0, {tv_sec=0, tv_nsec=500000000}, strace: Process 110541 detached
- <detached ...>
