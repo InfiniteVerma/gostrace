@@ -41,11 +41,13 @@ void wrapper_continue(pid_t pid) {
 char* wrapper_peek_regs(pid_t pid) {
     struct user_regs_struct regs;
     ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-    //printf("Write called with ""%llu, %llu, %llu\n", regs.rdi, regs.rsi, regs.rdx);
+    printf("Write called with ""%llu, %llu, %llu\n", regs.rdi, regs.rsi, regs.rdx);
     return wrapper_get_data(pid, regs.rsi, regs.rdx);
 }
 
 char* wrapper_get_data(pid_t pid, long addr, size_t size) {
+    //printf("wrapper_get_data BEGIN");
+    //fflush(stdout);
     char *buffer = (char*)malloc(size + 1);
     if (!buffer) {
         perror("malloc failed");
@@ -54,6 +56,8 @@ char* wrapper_get_data(pid_t pid, long addr, size_t size) {
 
     // Read the string data from the target process
     for (size_t i = 0; i < size; i += sizeof(long)) {
+        //printf("reading at addr: %lu", addr + i);
+        //fflush(stdout);
         long data = ptrace(PTRACE_PEEKDATA, pid, addr + i, NULL);
         if (data == -1 && errno) {
             perror("ptrace PEEKDATA failed");

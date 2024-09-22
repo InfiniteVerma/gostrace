@@ -95,11 +95,17 @@ type SysCallInfo struct {
 	param1 string
 	param2 string
 	param3 string
+	param4 string
 	ret    string
 }
 
 func getSysCallInfoStr(info SysCallInfo) string {
-	return info.name + "(" + info.param1 + ", " + info.param2 + ", " + info.param3 + ") = " + info.ret
+
+	if info.param4 != "" {
+		return info.name + "(" + info.param1 + ", " + info.param2 + ", " + info.param3 + ", " + info.param4 + ") = " + info.ret
+	} else {
+		return info.name + "(" + info.param1 + ", " + info.param2 + ", " + info.param3 + ") = " + info.ret
+	}
 }
 
 const HELP = "gostrace: must have PROG [ARGS] or -p PID. Try 'gostrace -h' for more information."
@@ -214,7 +220,6 @@ func main() {
 		//fmt.Println(sysCallPair)
 
 		if sysCallPair[1].orig_rax != 0 {
-
 			printSysCall(c_pid, sysCallPair)
 			//fmt.Println("Processed a sys call pair, resetting")
 			sysCallPair[0] = UserRegsStruct{}
@@ -257,6 +262,22 @@ func printSysCall(c_pid C.int, sysCallPair [2]UserRegsStruct) {
 		defer C.free(unsafe.Pointer(c_buffer_ptr))
 		buffer := strings.ReplaceAll(C.GoString(c_buffer_ptr), "\n", "\\n")
 		sysCallInfo.param2 = buffer
+		fmt.Println(getSysCallInfoStr(sysCallInfo))
+		processed = true
+	case clock_nanosleep:
+		sysCallInfo.param1 = clockIDNames[ClockID(sysCallPair[1].rdi)]
+		sysCallInfo.param2 = fmt.Sprint(sysCallPair[1].rsi)
+
+		c_timespec_ptr := C.wrapper_get_data(c_pid, C.long(rdx), C.ulong(unsafe.Sizeof(TimeSpec{})))
+		if c_timespec_ptr == nil {
+			fmt.Println("ERROR c_timespec_ptr is NULL!")
+			os.Exit(1)
+		}
+		defer C.free(unsafe.Pointer(c_timespec_ptr))
+		timeSpec := (*TimeSpec)(unsafe.Pointer(c_timespec_ptr))
+
+		sysCallInfo.param3 = toString(*timeSpec)
+		sysCallInfo.param4 = fmt.Sprint(sysCallPair[1].r10)
 		fmt.Println(getSysCallInfoStr(sysCallInfo))
 		processed = true
 	}
