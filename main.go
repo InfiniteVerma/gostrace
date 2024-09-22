@@ -205,7 +205,7 @@ func main() {
 				isWriteFound = false
 			}
 		} else {
-			fmt.Println(get_sys_call(sys_int), "(--) = ret")
+			fmt.Println(get_sys_call(sys_int))
 		}
 
 		C.wrapper_continue(c_pid)
